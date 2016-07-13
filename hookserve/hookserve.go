@@ -92,6 +92,7 @@ func (e *Event) String() (output string) {
 type Server struct {
 	Port       int        // Port to listen on. Defaults to 80
 	Path       string     // Path to receive on. Defaults to "/postreceive"
+	Ping       string     // Application healthcheck endpoint. Defaults to "/ping"
 	Secret     string     // Option secret key for authenticating via HMAC
 	IgnoreTags bool       // If set to false, also execute command if tag is pushed
 	Events     chan Event // Channel of events. Read from this channel to get push events as they happen.
@@ -99,10 +100,12 @@ type Server struct {
 
 // Create a new server with sensible defaults.
 // By default the Port is set to 80 and the Path is set to `/postreceive`
+// By default healthchecks are defined by Ping location and is set to `/ping`
 func NewServer() *Server {
 	return &Server{
 		Port:       80,
 		Path:       "/postreceive",
+		Ping:       "/ping",
 		IgnoreTags: true,
 		Events:     make(chan Event, 10), // buffered to 10 items
 	}
@@ -137,6 +140,11 @@ func (s *Server) ignoreRef(rawRef string) bool {
 func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	defer req.Body.Close()
 
+	// Return healthchecks
+	if req.Method == "GET" && req.URL.Path == s.Ping {
+		http.Error(w, "200 A-OK", http.StatusOK)
+		return
+	}
 	if req.Method != "POST" {
 		http.Error(w, "405 Method not allowed", http.StatusMethodNotAllowed)
 		return
