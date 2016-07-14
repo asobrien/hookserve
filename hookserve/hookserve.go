@@ -13,6 +13,7 @@ import (
 )
 
 var ErrInvalidEventFormat = errors.New("Unable to parse event string. Invalid Format.")
+var Version = "0.1.0"
 
 type Event struct {
 	Owner      string // The username of the owner of the repository
@@ -288,5 +289,6 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		s.Events <- event
 	}()
 
+	w.Header().Set("Server", "hookserve/"+Version)
 	w.Write([]byte(event.String()))
 }
